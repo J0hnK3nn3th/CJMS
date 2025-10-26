@@ -1,0 +1,22 @@
+{
+  "name": "cjms",
+  "version": "1.0.0",
+  "description": "CJMS Project",
+  "main": "index.js",
+  "scripts": {
+    "install": "cd frontend && npm install",
+    "start": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "test": "cd frontend && npm test",
+    "dev": "cd frontend && npm start",
+    "backend": "py manage.py runserver",
+    "dev:both": "concurrently \"py manage.py runserver\" \"cd frontend && npm start\"",
+    "start:all": "concurrently \"py manage.py runserver\" \"cd frontend && npm start\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
