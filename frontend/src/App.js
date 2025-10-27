@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoginPage from './LoginPage';
 import OrganizerPage from './OrganizerPage';
 import JudgeCodeModal from './JudgeCodeModal';
@@ -7,12 +7,28 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showOrganizer, setShowOrganizer] = useState(false);
   const [showJudgeModal, setShowJudgeModal] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        setShowOrganizer(true);
+      }
+      setIsCheckingAuth(false);
+    };
+    
+    checkAuth();
+  }, []);
 
   const handleLoginClick = () => {
     setShowLogin(true);
   };
 
   const handleBackToHome = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setShowLogin(false);
     setShowOrganizer(false);
   };
@@ -36,6 +52,17 @@ function App() {
   const handleCloseJudgeModal = () => {
     setShowJudgeModal(false);
   };
+
+  // Show loading state while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="App">
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (showOrganizer) {
     return <OrganizerPage onBack={handleBackToHome} />;

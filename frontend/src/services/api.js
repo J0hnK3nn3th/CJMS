@@ -14,7 +14,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Django REST Framework uses "Token" prefix by default
+      config.headers.Authorization = `Token ${token}`;
     }
     return config;
   },
@@ -59,6 +60,11 @@ export const authService = {
     const response = await api.get('/auth/profile/');
     return response.data;
   },
+  
+  verifyPassword: async (password) => {
+    const response = await api.post('/auth/verify-password/', { password });
+    return response.data;
+  },
 };
 
 export const dataService = {
@@ -85,6 +91,60 @@ export const dataService = {
   
   deleteCase: async (id) => {
     const response = await api.delete(`/cases/${id}/`);
+    return response.data;
+  },
+};
+
+export const eventService = {
+  getEvents: async () => {
+    const response = await api.get('/events/');
+    return response.data;
+  },
+  
+  getEvent: async (id) => {
+    const response = await api.get(`/events/${id}/`);
+    return response.data;
+  },
+  
+  createEvent: async (eventData) => {
+    const response = await api.post('/events/', eventData);
+    return response.data;
+  },
+  
+  updateEvent: async (id, eventData) => {
+    const response = await api.put(`/events/${id}/`, eventData);
+    return response.data;
+  },
+  
+  deleteEvent: async (id) => {
+    const response = await api.delete(`/events/${id}/`);
+    return response.data;
+  },
+};
+
+export const subEventService = {
+  getSubEvents: async () => {
+    const response = await api.get('/subevents/');
+    return response.data;
+  },
+  
+  getSubEvent: async (id) => {
+    const response = await api.get(`/subevents/${id}/`);
+    return response.data;
+  },
+  
+  createSubEvent: async (subEventData) => {
+    const response = await api.post('/subevents/', subEventData);
+    return response.data;
+  },
+  
+  updateSubEvent: async (id, subEventData) => {
+    const response = await api.put(`/subevents/${id}/`, subEventData);
+    return response.data;
+  },
+  
+  deleteSubEvent: async (id) => {
+    const response = await api.delete(`/subevents/${id}/`);
     return response.data;
   },
 };

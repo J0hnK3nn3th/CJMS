@@ -59,3 +59,48 @@ class CaseFile(models.Model):
     def __str__(self):
         return f"{self.filename} for {self.case.case_number}"
 
+class Event(models.Model):
+    STATUS_CHOICES = [
+        ('deactivated', 'Deactivated'),
+        ('activated', 'Activated'),
+        ('completed', 'Completed'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    year = models.IntegerField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    location = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='deactivated')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-year', '-start_date']
+    
+    def __str__(self):
+        return f"{self.title} ({self.year})"
+
+class SubEvent(models.Model):
+    STATUS_CHOICES = [
+        ('deactivated', 'Deactivated'),
+        ('activated', 'Activated'),
+        ('completed', 'Completed'),
+    ]
+    
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='sub_events')
+    title = models.CharField(max_length=200)
+    date = models.DateField()
+    time = models.TimeField()
+    location = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='deactivated')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['date', 'time']
+    
+    def __str__(self):
+        return f"{self.title} - {self.date}"
+

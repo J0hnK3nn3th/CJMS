@@ -5,10 +5,11 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .models import Case, CaseNote, CaseFile
+from .models import Case, CaseNote, CaseFile, Event, SubEvent
 from .serializers import (
     UserSerializer, CaseSerializer, CaseCreateSerializer,
-    CaseNoteSerializer, CaseFileSerializer
+    CaseNoteSerializer, CaseFileSerializer, EventSerializer, EventCreateSerializer,
+    SubEventSerializer
 )
 
 @api_view(['POST'])
@@ -117,4 +118,49 @@ class CaseFileViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
+
+class EventViewSet(viewsets.ModelViewSet):
+    queryset = Event.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return EventCreateSerializer
+        return EventSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def verify_password_view(request):
+    """
+    Verify the authenticated user's password
+    """
+    password = request.data.get('password')
+    
+    if not password:
+        return Response(
+            {'error': 'Password is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Authenticate with the current user's username and provided password
+    user = authenticate(username=request.user.username, password=password)
+    
+    if user is not None:
+        return Response({'verified': True})
+    else:
+        return Response(
+            {'error': 'Incorrect password', 'verified': False},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+class SubEventViewSet(viewsets.ModelViewSet):
+    queryset = SubEvent.objects.all()
+    serializer_class = SubEventSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        serializer.save()
 

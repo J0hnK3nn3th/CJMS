@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Case, CaseNote, CaseFile
+from .models import Case, CaseNote, CaseFile, Event, SubEvent
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,4 +46,31 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             'case_number', 'title', 'description', 'status', 'priority',
             'assigned_to', 'due_date'
         ]
+
+class EventSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'title', 'year', 'start_date', 'end_date', 'location',
+            'status', 'created_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+class EventCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = [
+            'title', 'year', 'start_date', 'end_date', 'location', 'status'
+        ]
+
+class SubEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubEvent
+        fields = [
+            'id', 'event', 'title', 'date', 'time', 'location', 'status',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
