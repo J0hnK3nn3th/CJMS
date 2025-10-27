@@ -743,28 +743,30 @@ const OrganizerPage = ({ onBack }) => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="startDate">Start Date</label>
-                  <input
-                    type="date"
-                    id="startDate"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+                <div className="form-group-row">
+                  <div className="form-group">
+                    <label htmlFor="startDate">Start Date</label>
+                    <input
+                      type="date"
+                      id="startDate"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <label htmlFor="endDate">End Date</label>
-                  <input
-                    type="date"
-                    id="endDate"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="form-group">
+                    <label htmlFor="endDate">End Date</label>
+                    <input
+                      type="date"
+                      id="endDate"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
