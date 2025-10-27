@@ -743,7 +743,7 @@ const OrganizerPage = ({ onBack }) => {
                   />
                 </div>
 
-                <div className="form-group-row">
+                <div className="dates-container">
                   <div className="form-group">
                     <label htmlFor="startDate">Start Date</label>
                     <input
@@ -878,28 +878,30 @@ const OrganizerPage = ({ onBack }) => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="date">Date</label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    value={subEventFormData.date}
-                    onChange={handleSubEventInputChange}
-                    required
-                  />
-                </div>
+                <div className="dates-container">
+                  <div className="form-group">
+                    <label htmlFor="date">Date</label>
+                    <input
+                      type="date"
+                      id="date"
+                      name="date"
+                      value={subEventFormData.date}
+                      onChange={handleSubEventInputChange}
+                      required
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <label htmlFor="time">Time</label>
-                  <input
-                    type="time"
-                    id="time"
-                    name="time"
-                    value={subEventFormData.time}
-                    onChange={handleSubEventInputChange}
-                    required
-                  />
+                  <div className="form-group">
+                    <label htmlFor="time">Time</label>
+                    <input
+                      type="time"
+                      id="time"
+                      name="time"
+                      value={subEventFormData.time}
+                      onChange={handleSubEventInputChange}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">

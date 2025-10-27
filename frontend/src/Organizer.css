@@ -380,8 +380,6 @@
   width: 95%;
   max-width: 1400px;
   max-height: 90vh;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   animation: slideIn 0.3s ease;
 }
@@ -393,7 +391,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
 }
 
 .settings-modal-header h2 {
@@ -407,9 +404,8 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1.5rem;
   padding: 2rem;
+  max-height: calc(90vh - 120px);
   overflow-y: auto;
-  flex: 1;
-  min-height: 0;
 }
 
 .settings-column {
@@ -646,7 +642,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  flex-shrink: 0;
 }
 
 .settings-cancel-btn,
@@ -792,8 +787,6 @@
   width: 90%;
   max-width: 500px;
   max-height: 90vh;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   animation: slideIn 0.3s ease;
 }
@@ -816,7 +809,6 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(229, 233, 197, 0.2);
-  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -851,9 +843,26 @@
 
 .modal-body {
   padding: 2rem;
+  max-height: calc(90vh - 120px);
   overflow-y: auto;
-  flex: 1;
-  min-height: 0;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #016B61;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #015952;
 }
 
 .modal-form {
@@ -862,16 +871,16 @@
   gap: 1.5rem;
 }
 
+.dates-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.form-group-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
 }
 
 .form-group label {
@@ -908,7 +917,6 @@
   gap: 1rem;
   justify-content: flex-end;
   margin-top: 1rem;
-  padding-top: 1rem;
 }
 
 .modal-cancel-btn {
@@ -1004,53 +1012,29 @@
   .modal-container {
     width: 95%;
     margin: 1rem;
-    max-height: 95vh;
-  }
-  
-  .modal-header {
-    padding: 1rem 1.5rem;
-  }
-  
-  .modal-header h2 {
-    font-size: 1.2rem;
   }
   
   .modal-body {
     padding: 1.5rem;
+    max-height: calc(90vh - 100px);
   }
   
-  .form-group-row {
+  .modal-form {
+    gap: 1.25rem;
+  }
+  
+  .dates-container {
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 1rem;
   }
   
   .modal-actions {
     flex-direction: column;
-    gap: 0.75rem;
   }
   
   .modal-cancel-btn,
   .modal-submit-btn {
     width: 100%;
-  }
-  
-  .settings-modal-container {
-    width: 98%;
-    max-height: 95vh;
-  }
-  
-  .settings-modal-content {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 1.5rem;
-  }
-  
-  .settings-modal-header h2 {
-    font-size: 1.2rem;
-  }
-  
-  .settings-column-header h3 {
-    font-size: 1rem;
   }
 }
 
@@ -1085,68 +1069,29 @@
   }
   
   .modal-container {
-    width: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-  
-  .modal-header {
-    padding: 1rem;
-  }
-  
-  .modal-header h2 {
-    font-size: 1.1rem;
+    width: 98%;
+    margin: 0.5rem;
   }
   
   .modal-body {
     padding: 1rem;
+    max-height: calc(90vh - 90px);
   }
   
-  .form-group label {
-    font-size: 0.85rem;
+  .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .form-group {
+    gap: 0.4rem;
   }
   
   .form-group input {
     padding: 0.75rem;
-    font-size: 0.9rem;
-  }
-  
-  .form-group-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  
-  .settings-modal-container {
-    width: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-  
-  .settings-modal-header {
-    padding: 1rem;
-  }
-  
-  .settings-modal-header h2 {
-    font-size: 1rem;
-  }
-  
-  .settings-modal-content {
-    padding: 1rem;
-  }
-  
-  .settings-modal-footer {
-    padding: 1rem;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .settings-cancel-btn,
-  .settings-save-btn {
-    width: 100%;
-    padding: 0.65rem 1rem;
-  }
-  
-  .settings-modal-content {
-    grid-template-columns: 1fr;
+    font-size: 0.95rem;
   }
 }
