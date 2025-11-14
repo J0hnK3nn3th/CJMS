@@ -1,28 +1,45 @@
 import React, { useState } from 'react';
+import { authService } from './services/api';
 
 const JudgeCodeModal = ({ isOpen, onClose, onSubmit }) => {
   const [judgeCode, setJudgeCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!judgeCode.trim()) return;
     
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
       console.log('Judge code submitted:', judgeCode);
-      onSubmit(judgeCode);
+      const response = await authService.judgeLogin(judgeCode);
+      console.log('Judge login successful:', response);
+      
+      // Pass the judge data to the parent component
+      onSubmit(response.judge);
       setJudgeCode('');
       setIsLoading(false);
       onClose();
-    }, 1000);
+    } catch (err) {
+      console.error('Judge login error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Invalid judge code. Please try again.';
+      setError(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
     setJudgeCode('');
+    setError('');
     onClose();
+  };
+  
+  const handleInputChange = (e) => {
+    setJudgeCode(e.target.value);
+    if (error) setError('');
   };
 
   if (!isOpen) return null;
@@ -49,12 +66,27 @@ const JudgeCodeModal = ({ isOpen, onClose, onSubmit }) => {
                 type="text"
                 id="judgeCode"
                 value={judgeCode}
-                onChange={(e) => setJudgeCode(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Enter judge code"
                 required
                 autoFocus
               />
             </div>
+            
+            {error && (
+              <div style={{
+                padding: '0.75rem',
+                backgroundColor: '#fee',
+                border: '1px solid #fcc',
+                borderRadius: '8px',
+                color: '#c33',
+                fontSize: '0.9rem',
+                textAlign: 'center',
+                marginTop: '0.5rem'
+              }}>
+                {error}
+              </div>
+            )}
             
             <div className="modal-actions">
               <button 

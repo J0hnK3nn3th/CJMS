@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './Organizer.css';
 import { eventService, authService, subEventService } from './services/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faList, faFileAlt, faFolder, faPlus, faToggleOff, faToggleOn, faEdit, faTrash, faPrint, faStar, faCalendarAlt, faMapMarkerAlt, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faList, faFileAlt, faFolder, faPlus, faToggleOff, faToggleOn, faEdit, faTrash, faPrint, faStar, faCalendarAlt, faMapMarkerAlt, faCog, faUser, faChartBar } from '@fortawesome/free-solid-svg-icons';
+import ScoreSheet from './ScoreSheet';
 
 const OrganizerPage = ({ onBack }) => {
   const [events, setEvents] = useState([]);
@@ -26,6 +27,8 @@ const OrganizerPage = ({ onBack }) => {
   const [expandedYear, setExpandedYear] = useState(null);
   const [expandedSubEvents, setExpandedSubEvents] = useState({}); // {eventId: true/false}
   const [subEventsData, setSubEventsData] = useState({}); // {eventId: [subEvents]}
+  const [selectedSubEventForScoreSheet, setSelectedSubEventForScoreSheet] = useState(null);
+  const [judgesData, setJudgesData] = useState({}); // {subEventId: [judges]}
   const [formData, setFormData] = useState({
     eventName: '',
     eventYear: '',
@@ -282,8 +285,30 @@ const OrganizerPage = ({ onBack }) => {
         ...prev,
         [eventId]: eventSubEvents
       }));
+      
+      // Also fetch judges for each sub-event
+      for (const subEvent of eventSubEvents) {
+        await fetchJudgesForSubEvent(subEvent.id);
+      }
     } catch (error) {
       console.error('Error fetching sub-events:', error);
+    }
+  };
+
+  const fetchJudgesForSubEvent = async (subEventId) => {
+    try {
+      const settings = await subEventService.getSubEventSettings(subEventId);
+      const judges = (settings.judges || []).sort((a, b) => {
+        if (a.type === 'chairman' && b.type !== 'chairman') return -1;
+        if (a.type !== 'chairman' && b.type === 'chairman') return 1;
+        return a.order - b.order;
+      });
+      setJudgesData(prev => ({
+        ...prev,
+        [subEventId]: judges
+      }));
+    } catch (error) {
+      console.error(`Error fetching judges for sub-event ${subEventId}:`, error);
     }
   };
 
@@ -375,22 +400,64 @@ const OrganizerPage = ({ onBack }) => {
     });
   };
 
-  const handleSettingsClick = (subEvent) => {
+  const handleSettingsClick = async (subEvent) => {
     setCurrentSubEventForSettings(subEvent);
-    // Initialize with 2 default empty fields
-    setContestants([
-      { id: Date.now(), name: '' },
-      { id: Date.now() + 1, name: '' }
-    ]);
-    setJudges([
-      { id: Date.now(), name: '', code: '', type: 'judge' },
-      { id: Date.now() + 1, name: '', code: '', type: 'judge' }
-    ]);
-    setCriteria([
-      { id: Date.now(), name: '', points: '' },
-      { id: Date.now() + 1, name: '', points: '' }
-    ]);
-    setIsSettingsModalOpen(true);
+    setIsLoading(true);
+    try {
+      // Load existing settings from database
+      const settings = await subEventService.getSubEventSettings(subEvent.id);
+      
+      // Load contestants
+      if (settings.contestants && settings.contestants.length > 0) {
+        setContestants(settings.contestants.map(c => ({ id: c.id, name: c.name })));
+      } else {
+        // Initialize with 2 default empty fields if no data
+        setContestants([
+          { id: Date.now(), name: '' },
+          { id: Date.now() + 1, name: '' }
+        ]);
+      }
+      
+      // Load judges
+      if (settings.judges && settings.judges.length > 0) {
+        setJudges(settings.judges.map(j => ({ id: j.id, name: j.name, code: j.code, type: j.type })));
+      } else {
+        // Initialize with 2 default empty fields if no data
+        setJudges([
+          { id: Date.now(), name: '', code: '', type: 'judge' },
+          { id: Date.now() + 1, name: '', code: '', type: 'judge' }
+        ]);
+      }
+      
+      // Load criteria
+      if (settings.criteria && settings.criteria.length > 0) {
+        setCriteria(settings.criteria.map(c => ({ id: c.id, name: c.name, points: c.points })));
+      } else {
+        // Initialize with 2 default empty fields if no data
+        setCriteria([
+          { id: Date.now(), name: '', points: '' },
+          { id: Date.now() + 1, name: '', points: '' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      // Initialize with defaults on error
+      setContestants([
+        { id: Date.now(), name: '' },
+        { id: Date.now() + 1, name: '' }
+      ]);
+      setJudges([
+        { id: Date.now(), name: '', code: '', type: 'judge' },
+        { id: Date.now() + 1, name: '', code: '', type: 'judge' }
+      ]);
+      setCriteria([
+        { id: Date.now(), name: '', points: '' },
+        { id: Date.now() + 1, name: '', points: '' }
+      ]);
+    } finally {
+      setIsLoading(false);
+      setIsSettingsModalOpen(true);
+    }
   };
 
   const handleCloseSettingsModal = () => {
@@ -504,18 +571,20 @@ const OrganizerPage = ({ onBack }) => {
 
       {/* Main Content */}
       <div className="content-area">
-        <div className="page-title">
-          <h2>List of Events</h2>
-        </div>
-        
-        <div className="breadcrumb-container">
-          <button className="add-event-button" onClick={handleAddEvent}>
-            <FontAwesomeIcon icon={faPlus} />
-            <span>Event</span>
-          </button>
-        </div>
+        {activeTab === 'events' ? (
+          <>
+            <div className="page-title">
+              <h2>List of Events</h2>
+            </div>
+            
+            <div className="breadcrumb-container">
+              <button className="add-event-button" onClick={handleAddEvent}>
+                <FontAwesomeIcon icon={faPlus} />
+                <span>Event</span>
+              </button>
+            </div>
 
-        <div className="events-section">
+            <div className="events-section">
           <div className="events-list">
             {isLoading ? (
               <div className="empty-state">
@@ -699,6 +768,124 @@ const OrganizerPage = ({ onBack }) => {
             )}
           </div>
         </div>
+          </>
+        ) : (
+          <>
+            <div className="page-title">
+              <h2>Score Sheets</h2>
+              <p className="subtitle">View and manage scoring data for your events</p>
+            </div>
+
+            <div className="events-section">
+              <div className="events-list">
+                {isLoading ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">⏳</div>
+                    <h3>Loading events...</h3>
+                  </div>
+                ) : events.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">📅</div>
+                    <h3>No events yet</h3>
+                    <p>Create an event to view score sheets</p>
+                  </div>
+                ) : (
+                  Object.entries(groupEventsByYear()).map(([year, yearEvents]) => (
+                    <div key={year} className="year-group">
+                      <div className="year-event-card" onClick={() => toggleYear(year)}>
+                        <div className="year-left">
+                          <FontAwesomeIcon icon={faFolder} className="folder-icon" />
+                          <span className="year-text">{year}</span>
+                        </div>
+                        <div className="year-right">
+                          {yearEvents.length} Event{yearEvents.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      {expandedYear === year && (
+                        <div className="events-under-year">
+                          {yearEvents.map(event => (
+                            <div key={event.id}>
+                              <div className="event-detail-card">
+                                <div className="event-detail-info">
+                                  <span className="event-title-inline">
+                                    <FontAwesomeIcon icon={faStar} className="info-icon" />
+                                    {event.title}
+                                  </span>
+                                  <span className="event-date-inline">
+                                    <FontAwesomeIcon icon={faCalendarAlt} className="info-icon" />
+                                    {event.start_date} {event.end_date && `- ${event.end_date}`}
+                                  </span>
+                                  {event.location && <span className="event-location-inline">
+                                    <FontAwesomeIcon icon={faMapMarkerAlt} className="info-icon" />
+                                    {event.location}
+                                  </span>}
+                                  <span className={`event-status ${event.status}`}>
+                                    {event.status === 'activated' ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <div className="event-icon-actions">
+                                  <button 
+                                    className="icon-btn list-btn"
+                                    disabled={event.status === 'deactivated'}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleListButtonClick(event);
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={faList} />
+                                  </button>
+                                </div>
+                              </div>
+                              {expandedSubEvents[event.id] && subEventsData[event.id] && (
+                                <div className="sub-events-list">
+                                  <div className="sub-events-header">
+                                    <FontAwesomeIcon icon={faList} />
+                                    <span>Sub-Events</span>
+                                  </div>
+                                  {subEventsData[event.id].map(subEvent => (
+                                    <div key={subEvent.id} className="sub-event-card score-sub-event-card">
+                                      <div className="sub-event-info">
+                                        <span className="sub-event-title">
+                                          <FontAwesomeIcon icon={faStar} className="info-icon" />
+                                          {subEvent.title}
+                                        </span>
+                                        <span className="sub-event-date">
+                                          <FontAwesomeIcon icon={faCalendarAlt} className="info-icon" />
+                                          {subEvent.date}
+                                        </span>
+                                        <span className="sub-event-time">at {subEvent.time}</span>
+                                        <span className="sub-event-location">
+                                          <FontAwesomeIcon icon={faMapMarkerAlt} className="info-icon" />
+                                          {subEvent.location}
+                                        </span>
+                                        <span className={`event-status ${subEvent.status}`}>
+                                          {subEvent.status === 'activated' ? 'Active' : 'Inactive'}
+                                        </span>
+                                      </div>
+                                      <div className="judge-buttons-container">
+                                        <button
+                                          className="view-scores-button"
+                                          onClick={() => setSelectedSubEventForScoreSheet({ subEvent, judge: null })}
+                                        >
+                                          <FontAwesomeIcon icon={faChartBar} />
+                                          <span>View Scores</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Add/Edit Event Modal */}
@@ -990,16 +1177,22 @@ const OrganizerPage = ({ onBack }) => {
                   {judges.map((judge, index) => (
                     <div key={judge.id} className="settings-item">
                       <div className="settings-item-content">
-                        <span className="item-label">{judge.type === 'chairman' ? 'Chairman of the Board' : `Judge No. ${index}`}</span>
+                        <span className="item-label">{judge.type === 'chairman' ? 'Chairman of the Board' : `Judge No. ${index + 1}`}</span>
                         <input
                           type="text"
                           value={judge.name}
                           onChange={(e) => updateJudge(judge.id, 'name', e.target.value)}
                           className="settings-input"
+                          placeholder="Enter judge name"
                         />
                         {judge.code && (
                           <div className="current-code">
-                            Current Code: <strong>{judge.code}</strong>
+                            Judge Code: <strong>{judge.code}</strong>
+                          </div>
+                        )}
+                        {!judge.code && judge.name && (
+                          <div className="current-code" style={{ color: '#70B2B2', fontStyle: 'italic' }}>
+                            Code will be generated when saved
                           </div>
                         )}
                       </div>
@@ -1054,16 +1247,58 @@ const OrganizerPage = ({ onBack }) => {
               <button className="settings-cancel-btn" onClick={handleCloseSettingsModal}>
                 Cancel
               </button>
-              <button className="settings-save-btn" onClick={() => {
-                // Handle save functionality here
-                alert('Settings saved!');
-                handleCloseSettingsModal();
-              }}>
-                Save
+              <button 
+                className="settings-save-btn" 
+                onClick={async () => {
+                  try {
+                    setIsLoading(true);
+                    // Prepare settings data
+                    const settingsData = {
+                      contestants: contestants.map(c => ({ name: c.name })),
+                      judges: judges.map(j => ({ 
+                        name: j.name, 
+                        type: j.type || 'judge',
+                        code: j.code || ''  // Preserve existing code if available
+                      })),
+                      criteria: criteria.map(c => ({ name: c.name, points: c.points || '0' }))
+                    };
+                    
+                    // Save to database
+                    const result = await subEventService.saveSubEventSettings(
+                      currentSubEventForSettings.id,
+                      settingsData
+                    );
+                    
+                    // Update local state with returned data (including generated codes)
+                    if (result.judges) {
+                      setJudges(result.judges.map(j => ({ id: j.id, name: j.name, code: j.code, type: j.type })));
+                    }
+                    
+                    alert('Settings saved successfully!');
+                    handleCloseSettingsModal();
+                  } catch (error) {
+                    console.error('Error saving settings:', error);
+                    alert('Failed to save settings. Please try again.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Score Sheet Modal */}
+      {selectedSubEventForScoreSheet && (
+        <ScoreSheet
+          subEvent={selectedSubEventForScoreSheet.subEvent}
+          initialJudge={selectedSubEventForScoreSheet.judge}
+          onClose={() => setSelectedSubEventForScoreSheet(null)}
+        />
       )}
     </div>
   );

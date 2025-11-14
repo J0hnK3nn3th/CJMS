@@ -1,0 +1,590 @@
+/* Score Sheet Modal */
+.score-sheet-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+  padding: 2rem;
+}
+
+.score-sheet-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 1400px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.score-sheet-header {
+  background: linear-gradient(135deg, #016B61 0%, #70B2B2 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score-sheet-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.score-sheet-print-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid white;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.score-sheet-print-btn:hover {
+  background: white;
+  color: #016B61;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.score-sheet-print-btn svg {
+  font-size: 1rem;
+}
+
+.score-sheet-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.score-sheet-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.score-sheet-close-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.score-sheet-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.score-sheet-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.judges-section {
+  width: 250px;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.judges-section h3 {
+  margin: 0 0 1rem 0;
+  color: #016B61;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.judges-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.judge-button {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #016B61;
+  text-align: left;
+}
+
+.judge-button:hover {
+  border-color: #70B2B2;
+  background: #f0f9fa;
+  transform: translateX(4px);
+}
+
+.judge-button.active {
+  background: linear-gradient(135deg, #016B61 0%, #70B2B2 100%);
+  color: white;
+  border-color: #016B61;
+}
+
+.judge-button.active svg {
+  color: white;
+}
+
+.judge-button svg {
+  color: #016B61;
+  font-size: 1rem;
+}
+
+.overall-button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border-color: #28a745;
+}
+
+.overall-button:hover {
+  background: linear-gradient(135deg, #218838 0%, #1aa179 100%);
+  border-color: #218838;
+}
+
+.overall-button.active {
+  background: linear-gradient(135deg, #218838 0%, #1aa179 100%);
+}
+
+.overall-button svg {
+  color: white;
+}
+
+.scores-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scores-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.scores-header h3 {
+  margin: 0;
+  color: #016B61;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.scores-table-container {
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem 2rem;
+}
+
+.scores-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.scores-table thead {
+  background: linear-gradient(135deg, #016B61 0%, #70B2B2 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.scores-table th {
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.scores-table th:first-child {
+  text-align: left;
+}
+
+.scores-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s ease;
+}
+
+.scores-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.scores-table td {
+  padding: 1rem;
+  font-size: 0.95rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.scores-table td:first-child {
+  text-align: left;
+}
+
+.rank-cell {
+  font-weight: 700;
+  color: #016B61;
+  text-align: center;
+  font-size: 1.1rem;
+  vertical-align: middle;
+  width: 60px;
+}
+
+.contestant-name {
+  font-weight: 600;
+  color: #016B61;
+}
+
+.score-cell {
+  text-align: center;
+  color: #333;
+  vertical-align: middle;
+}
+
+.total-score {
+  font-weight: 700;
+  color: #016B61;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.comments-cell {
+  max-width: 300px;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.loading-state,
+.no-data {
+  padding: 3rem;
+  text-align: center;
+  color: #70B2B2;
+  font-size: 1.1rem;
+}
+
+/* Scrollbar styling */
+.judges-section::-webkit-scrollbar,
+.scores-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.judges-section::-webkit-scrollbar-track,
+.scores-table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.judges-section::-webkit-scrollbar-thumb,
+.scores-table-container::-webkit-scrollbar-thumb {
+  background: #016B61;
+  border-radius: 4px;
+}
+
+.judges-section::-webkit-scrollbar-thumb:hover,
+.scores-table-container::-webkit-scrollbar-thumb:hover {
+  background: #015952;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .score-sheet-content {
+    flex-direction: column;
+  }
+  
+  .judges-section {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    max-height: 200px;
+  }
+  
+  .judges-list {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  
+  .judge-button {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .score-sheet-modal {
+    padding: 1rem;
+  }
+  
+  .score-sheet-container {
+    max-height: 95vh;
+  }
+  
+  .scores-table {
+    font-size: 0.85rem;
+  }
+  
+  .scores-table th,
+  .scores-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Print All Score Sheets - Hidden by default, visible when printing */
+.print-all-scoresheets {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 100%;
+  visibility: hidden;
+  opacity: 0;
+  z-index: -1;
+}
+
+@media print {
+  /* Hide everything */
+  * {
+    visibility: hidden;
+  }
+  
+  /* Show only print content */
+  .print-all-scoresheets,
+  .print-all-scoresheets * {
+    visibility: visible !important;
+  }
+  
+  .print-all-scoresheets {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    visibility: visible;
+    opacity: 1;
+    z-index: 9999;
+    background: white;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Hide modal when printing */
+  .score-sheet-modal,
+  .score-sheet-container,
+  .score-sheet-header-actions,
+  .judges-section,
+  .scores-section {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  .print-scoresheet-page {
+    page-break-after: always;
+    page-break-inside: avoid;
+    margin: 0;
+    padding: 2rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .print-scoresheet-page:last-child {
+    page-break-after: auto;
+  }
+  
+  .print-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    border-bottom: 3px solid #016B61;
+    padding-bottom: 1rem;
+  }
+  
+  .print-header h1 {
+    color: #016B61;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .print-subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+  }
+  
+  .print-judge-info {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    text-align: center;
+  }
+  
+  .print-judge-name {
+    color: #016B61;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    border-bottom: 1px solid #016B61;
+    padding-bottom: 0.25rem;
+    display: inline-block;
+  }
+  
+  .print-judge-number {
+    color: #016B61;
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .print-table-container {
+    margin: 2rem 0;
+    flex: 1;
+  }
+  
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 auto;
+  }
+  
+  .print-table thead {
+    background: #016B61;
+    color: white;
+  }
+  
+  .print-table thead th {
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid #015952;
+  }
+  
+  .print-table thead th:first-child {
+    text-align: left;
+  }
+  
+  .print-table tbody tr {
+    border-bottom: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+  
+  .print-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+  }
+  
+  .print-table tbody td {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  .print-table tbody td:first-child {
+    text-align: left;
+  }
+  
+  .print-table .contestant-name {
+    font-weight: 600;
+    color: #016B61;
+  }
+  
+  .print-table .score-cell {
+    text-align: center;
+  }
+  
+  .print-table .total-score {
+    font-weight: 700;
+    color: #016B61;
+    text-align: center;
+    font-size: 1rem;
+  }
+  
+  .print-table .rank-cell {
+    font-weight: 700;
+    color: #016B61;
+    text-align: center;
+    font-size: 1.1rem;
+  }
+  
+  .print-table .comments-cell {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+    max-width: 250px;
+    text-align: left;
+  }
+  
+  .print-judges-list {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+  
+  .print-judges-list .print-judge-info {
+    margin-top: 0;
+    padding-top: 0;
+    text-align: center;
+  }
+  
+  @page {
+    margin: 1cm;
+    size: A4 landscape;
+  }
+}

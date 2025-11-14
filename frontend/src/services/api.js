@@ -31,9 +31,16 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      // Only redirect to login for organizer/admin authentication
+      // Don't redirect for judge endpoints
+      const isJudgeEndpoint = error.config?.url?.includes('/auth/judge-login') || 
+                               error.config?.url?.includes('/subevents');
+      
+      if (!isJudgeEndpoint && localStorage.getItem('authToken')) {
+        // Handle unauthorized access for authenticated organizers
+        localStorage.removeItem('authToken');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -63,6 +70,11 @@ export const authService = {
   
   verifyPassword: async (password) => {
     const response = await api.post('/auth/verify-password/', { password });
+    return response.data;
+  },
+  
+  judgeLogin: async (code) => {
+    const response = await api.post('/auth/judge-login/', { code });
     return response.data;
   },
 };
@@ -146,6 +158,52 @@ export const subEventService = {
   deleteSubEvent: async (id) => {
     const response = await api.delete(`/subevents/${id}/`);
     return response.data;
+  },
+  
+  getSubEventSettings: async (subEventId) => {
+    const response = await api.get(`/subevents/${subEventId}/settings/`);
+    return response.data;
+  },
+  
+  saveSubEventSettings: async (subEventId, settings) => {
+    const response = await api.post(`/subevents/${subEventId}/settings/`, settings);
+    return response.data;
+  },
+};
+
+export const scoreService = {
+  getJudgeScores: async (judgeId) => {
+    const response = await api.get(`/judges/${judgeId}/scores/`);
+    return response.data;
+  },
+  
+  saveJudgeScores: async (judgeId, scores) => {
+    const response = await api.post(`/judges/${judgeId}/scores/save/`, { scores });
+    return response.data;
+  },
+  
+  getSubEventScores: async (subEventId) => {
+    // Get all judges for the sub-event and their scores
+    const settings = await subEventService.getSubEventSettings(subEventId);
+    const judges = settings.judges || [];
+    const allScores = {};
+    
+    for (const judge of judges) {
+      try {
+        const judgeScores = await api.get(`/judges/${judge.id}/scores/`);
+        allScores[judge.id] = judgeScores.data;
+      } catch (error) {
+        console.error(`Error fetching scores for judge ${judge.id}:`, error);
+        allScores[judge.id] = { scores: {}, comments: {} };
+      }
+    }
+    
+    return {
+      judges,
+      contestants: settings.contestants || [],
+      criteria: settings.criteria || [],
+      scores: allScores
+    };
   },
 };
 

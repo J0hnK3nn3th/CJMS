@@ -2,19 +2,31 @@ import React, { useState, useEffect } from 'react';
 import LoginPage from './LoginPage';
 import OrganizerPage from './OrganizerPage';
 import JudgeCodeModal from './JudgeCodeModal';
+import JudgePage from './JudgePage';
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showOrganizer, setShowOrganizer] = useState(false);
   const [showJudgeModal, setShowJudgeModal] = useState(false);
+  const [showJudge, setShowJudge] = useState(false);
+  const [judgeData, setJudgeData] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Check if user is already authenticated on mount
   useEffect(() => {
     const checkAuth = () => {
       const authToken = localStorage.getItem('authToken');
+      const savedJudgeData = localStorage.getItem('judgeData');
+      
       if (authToken) {
         setShowOrganizer(true);
+      } else if (savedJudgeData) {
+        try {
+          setJudgeData(JSON.parse(savedJudgeData));
+          setShowJudge(true);
+        } catch (e) {
+          localStorage.removeItem('judgeData');
+        }
       }
       setIsCheckingAuth(false);
     };
@@ -29,8 +41,11 @@ function App() {
   const handleBackToHome = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('judgeData');
     setShowLogin(false);
     setShowOrganizer(false);
+    setShowJudge(false);
+    setJudgeData(null);
   };
 
   const handleLoginSuccess = (user) => {
@@ -43,10 +58,19 @@ function App() {
     setShowJudgeModal(true);
   };
 
-  const handleJudgeCodeSubmit = (code) => {
-    console.log('Judge code submitted:', code);
-    // Here you would typically handle the judge code validation
-    // and redirect to the judging interface
+  const handleJudgeCodeSubmit = (judge) => {
+    console.log('Judge data received:', judge);
+    // Store judge data and show judge page
+    localStorage.setItem('judgeData', JSON.stringify(judge));
+    setJudgeData(judge);
+    setShowJudgeModal(false);
+    setShowJudge(true);
+  };
+  
+  const handleJudgeLogout = () => {
+    localStorage.removeItem('judgeData');
+    setJudgeData(null);
+    setShowJudge(false);
   };
 
   const handleCloseJudgeModal = () => {
@@ -70,6 +94,10 @@ function App() {
 
   if (showLogin) {
     return <LoginPage onBack={handleBackToHome} onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (showJudge && judgeData) {
+    return <JudgePage judgeData={judgeData} onLogout={handleJudgeLogout} />;
   }
 
   return (

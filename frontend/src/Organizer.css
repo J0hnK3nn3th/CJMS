@@ -734,6 +734,76 @@
   color: #495057;
 }
 
+.event-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.event-status.activated {
+  background: rgba(40, 167, 69, 0.2);
+  color: #155724;
+}
+
+.event-status.deactivated {
+  background: rgba(255, 193, 7, 0.2);
+  color: #856404;
+}
+
+/* Score Sheets Styles */
+.sub-events-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #016B61;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+}
+
+.score-sub-event-card {
+  margin-bottom: 1rem;
+}
+
+.judge-buttons-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.view-scores-button {
+  background: linear-gradient(135deg, #016B61 0%, #70B2B2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(1, 107, 97, 0.2);
+}
+
+.view-scores-button:hover {
+  background: linear-gradient(135deg, #70B2B2 0%, #016B61 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(1, 107, 97, 0.3);
+}
+
+.view-scores-button svg {
+  font-size: 1rem;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 2rem;

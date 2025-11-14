@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+import random
+import string
 
 class Case(models.Model):
     STATUS_CHOICES = [
@@ -103,4 +105,81 @@ class SubEvent(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.date}"
+
+class Contestant(models.Model):
+    sub_event = models.ForeignKey(SubEvent, on_delete=models.CASCADE, related_name='contestants')
+    name = models.CharField(max_length=200)
+    order = models.IntegerField(default=0)  # To maintain order of contestants
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'id']
+    
+    def __str__(self):
+        return f"{self.name} - {self.sub_event.title}"
+
+def generate_judge_code():
+    """Generate a unique 6-digit numeric code for judge login"""
+    while True:
+        code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        if not Judge.objects.filter(code=code).exists():
+            return code
+
+class Judge(models.Model):
+    TYPE_CHOICES = [
+        ('judge', 'Judge'),
+        ('chairman', 'Chairman of the Board'),
+    ]
+    
+    sub_event = models.ForeignKey(SubEvent, on_delete=models.CASCADE, related_name='judges')
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=6, unique=True)  # 6-digit random code for login
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='judge')
+    order = models.IntegerField(default=0)  # To maintain order of judges
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['type', 'order', 'id']
+    
+    def __str__(self):
+        return f"{self.name} ({self.code}) - {self.sub_event.title}"
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = generate_judge_code()
+        super().save(*args, **kwargs)
+
+class Criteria(models.Model):
+    sub_event = models.ForeignKey(SubEvent, on_delete=models.CASCADE, related_name='criteria')
+    name = models.CharField(max_length=200)
+    points = models.DecimalField(max_digits=5, decimal_places=2)  # Points as percentage
+    order = models.IntegerField(default=0)  # To maintain order of criteria
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name_plural = 'Criteria'
+    
+    def __str__(self):
+        return f"{self.name} ({self.points}%) - {self.sub_event.title}"
+
+class Score(models.Model):
+    judge = models.ForeignKey(Judge, on_delete=models.CASCADE, related_name='scores')
+    contestant = models.ForeignKey(Contestant, on_delete=models.CASCADE, related_name='scores')
+    criterion = models.ForeignKey(Criteria, on_delete=models.CASCADE, related_name='scores')
+    score = models.IntegerField(null=True, blank=True)  # Score as percentage (0-100), null if not scored yet
+    comments = models.TextField(blank=True, default='')  # Comments for the contestant
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['judge', 'contestant', 'criterion']  # One score per judge per contestant per criterion
+        ordering = ['contestant__order', 'criterion__order']
+    
+    def __str__(self):
+        score_display = self.score if self.score is not None else 'Not scored'
+        return f"{self.judge.name} - {self.contestant.name} - {self.criterion.name}: {score_display}%"
 

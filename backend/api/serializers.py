@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Case, CaseNote, CaseFile, Event, SubEvent
+from .models import Case, CaseNote, CaseFile, Event, SubEvent, Contestant, Judge, Criteria, Score
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -73,4 +73,34 @@ class SubEventSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class ContestantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contestant
+        fields = ['id', 'sub_event', 'name', 'order', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class JudgeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Judge
+        fields = ['id', 'sub_event', 'name', 'code', 'type', 'order', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'code', 'created_at', 'updated_at']
+
+class CriteriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Criteria
+        fields = ['id', 'sub_event', 'name', 'points', 'order', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class ScoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Score
+        fields = ['id', 'judge', 'contestant', 'criterion', 'score', 'comments', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class SubEventSettingsSerializer(serializers.Serializer):
+    """Serializer for saving sub-event settings (contestants, judges, criteria)"""
+    contestants = ContestantSerializer(many=True, required=False)
+    judges = JudgeSerializer(many=True, required=False)
+    criteria = CriteriaSerializer(many=True, required=False)
 

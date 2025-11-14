@@ -5,12 +5,13 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .models import Case, CaseNote, CaseFile, Event, SubEvent
+from .models import Case, CaseNote, CaseFile, Event, SubEvent, Contestant, Judge, Criteria, Score
 from .serializers import (
     UserSerializer, CaseSerializer, CaseCreateSerializer,
     CaseNoteSerializer, CaseFileSerializer, EventSerializer, EventCreateSerializer,
-    SubEventSerializer
+    SubEventSerializer, ContestantSerializer, JudgeSerializer, CriteriaSerializer, ScoreSerializer
 )
+from .models import generate_judge_code
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -163,4 +164,286 @@ class SubEventViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save()
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def judge_login_view(request):
+    """
+    Judge login using judge code
+    """
+    code = request.data.get('code')
+    
+    if not code:
+        return Response(
+            {'error': 'Judge code is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        judge = Judge.objects.select_related('sub_event', 'sub_event__event').get(code=code)
+        
+        # Return judge data with sub-event and event details
+        return Response({
+            'judge': {
+                'id': judge.id,
+                'name': judge.name,
+                'code': judge.code,
+                'type': judge.type,
+                'sub_event': {
+                    'id': judge.sub_event.id,
+                    'title': judge.sub_event.title,
+                    'date': judge.sub_event.date,
+                    'time': judge.sub_event.time,
+                    'location': judge.sub_event.location,
+                    'event': {
+                        'id': judge.sub_event.event.id,
+                        'title': judge.sub_event.event.title,
+                        'year': judge.sub_event.event.year,
+                    }
+                }
+            }
+        })
+    except Judge.DoesNotExist:
+        return Response(
+            {'error': 'Invalid judge code'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])  # Allow judges (who don't have tokens) to access GET
+def subevent_settings_view(request, subevent_id):
+    """
+    GET: Retrieve all settings (contestants, judges, criteria) for a sub-event
+    POST: Save settings for a sub-event (replaces all existing settings)
+    """
+    try:
+        sub_event = SubEvent.objects.get(id=subevent_id)
+    except SubEvent.DoesNotExist:
+        return Response(
+            {'error': 'Sub-event not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == 'GET':
+        # Get all contestants, judges, and criteria for this sub-event
+        # Allow public access for judges to view settings
+        contestants = Contestant.objects.filter(sub_event=sub_event)
+        judges = Judge.objects.filter(sub_event=sub_event)
+        criteria = Criteria.objects.filter(sub_event=sub_event)
+        
+        return Response({
+            'contestants': ContestantSerializer(contestants, many=True).data,
+            'judges': JudgeSerializer(judges, many=True).data,
+            'criteria': CriteriaSerializer(criteria, many=True).data,
+        })
+    
+    elif request.method == 'POST':
+        # Only authenticated users can save settings
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        # Delete existing settings
+        Contestant.objects.filter(sub_event=sub_event).delete()
+        Judge.objects.filter(sub_event=sub_event).delete()
+        Criteria.objects.filter(sub_event=sub_event).delete()
+        
+        # Create new contestants
+        contestants_data = request.data.get('contestants', [])
+        contestants = []
+        for idx, contestant_data in enumerate(contestants_data):
+            if contestant_data.get('name'):  # Only create if name is not empty
+                contestant = Contestant.objects.create(
+                    sub_event=sub_event,
+                    name=contestant_data['name'],
+                    order=idx
+                )
+                contestants.append(ContestantSerializer(contestant).data)
+        
+        # Create new judges
+        judges_data = request.data.get('judges', [])
+        judges = []
+        for idx, judge_data in enumerate(judges_data):
+            if judge_data.get('name'):  # Only create if name is not empty
+                # Use existing code if provided and valid, otherwise generate new one
+                code = judge_data.get('code')
+                if code and len(code) == 6 and code.isdigit():
+                    # Verify code is unique (check all other judges since we deleted this sub_event's judges)
+                    if Judge.objects.filter(code=code).exists():
+                        code = generate_judge_code()  # Generate new if code already exists for another judge
+                else:
+                    code = generate_judge_code()  # Generate unique 6-digit code
+                
+                judge = Judge.objects.create(
+                    sub_event=sub_event,
+                    name=judge_data['name'],
+                    code=code,
+                    type=judge_data.get('type', 'judge'),
+                    order=idx
+                )
+                judges.append(JudgeSerializer(judge).data)
+        
+        # Create new criteria
+        criteria_data = request.data.get('criteria', [])
+        criteria = []
+        for idx, criterion_data in enumerate(criteria_data):
+            if criterion_data.get('name'):  # Only create if name is not empty
+                try:
+                    points = float(criterion_data.get('points', 0))
+                except (ValueError, TypeError):
+                    points = 0
+                
+                criterion = Criteria.objects.create(
+                    sub_event=sub_event,
+                    name=criterion_data['name'],
+                    points=points,
+                    order=idx
+                )
+                criteria.append(CriteriaSerializer(criterion).data)
+        
+        return Response({
+            'contestants': contestants,
+            'judges': judges,
+            'criteria': criteria,
+            'message': 'Settings saved successfully'
+        }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def judge_scores_view(request, judge_id):
+    """
+    GET: Retrieve all scores for a specific judge
+    """
+    try:
+        judge = Judge.objects.select_related('sub_event').get(id=judge_id)
+    except Judge.DoesNotExist:
+        return Response(
+            {'error': 'Judge not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    scores = Score.objects.filter(judge=judge).select_related('contestant', 'criterion')
+    
+    # Organize scores by contestant
+    scores_by_contestant = {}
+    comments_by_contestant = {}
+    
+    for score in scores:
+        contestant_id = score.contestant.id
+        if contestant_id not in scores_by_contestant:
+            scores_by_contestant[contestant_id] = {}
+            comments_by_contestant[contestant_id] = score.comments or ''
+        
+        scores_by_contestant[contestant_id][score.criterion.id] = score.score
+    
+    return Response({
+        'scores': scores_by_contestant,
+        'comments': comments_by_contestant
+    })
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def save_judge_scores_view(request, judge_id):
+    """
+    POST: Save/update scores for a judge
+    Expected payload:
+    {
+        "scores": {
+            "contestant_id": {
+                "criterion_id": { "score": score_value },
+                "comments": "comment text"
+            }
+        }
+    }
+    """
+    try:
+        judge = Judge.objects.get(id=judge_id)
+    except Judge.DoesNotExist:
+        return Response(
+            {'error': 'Judge not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    saved_scores = []
+    errors = []
+    
+    scores_data = request.data.get('scores', request.data)  # Support both formats
+    
+    for contestant_id, data in scores_data.items():
+        try:
+            contestant = Contestant.objects.get(id=contestant_id, sub_event=judge.sub_event)
+        except (Contestant.DoesNotExist, ValueError):
+            try:
+                contestant_id_int = int(contestant_id)
+                contestant = Contestant.objects.get(id=contestant_id_int, sub_event=judge.sub_event)
+            except (Contestant.DoesNotExist, ValueError):
+                errors.append(f'Contestant {contestant_id} not found')
+                continue
+        
+        comments = data.get('comments', '')
+        
+        # Save/update scores for each criterion
+        for criterion_id, criterion_data in data.items():
+            if criterion_id == 'comments':
+                continue
+            
+            try:
+                criterion = Criteria.objects.get(id=criterion_id, sub_event=judge.sub_event)
+            except (Criteria.DoesNotExist, ValueError):
+                try:
+                    criterion_id_int = int(criterion_id)
+                    criterion = Criteria.objects.get(id=criterion_id_int, sub_event=judge.sub_event)
+                except (Criteria.DoesNotExist, ValueError):
+                    errors.append(f'Criterion {criterion_id} not found')
+                    continue
+            
+            # Handle both {score: value} format and direct value format
+            if isinstance(criterion_data, dict):
+                score_value = criterion_data.get('score')
+            else:
+                score_value = criterion_data
+            
+            # Validate score value
+            score_int = None
+            if score_value is not None and score_value != '':
+                try:
+                    score_int = int(score_value)
+                    if score_int < 0 or score_int > 100:
+                        errors.append(f'Score {score_int} for criterion {criterion_id} is out of range (0-100)')
+                        continue
+                except (ValueError, TypeError):
+                    # Allow null/empty scores
+                    pass
+            
+            # Get or create the score
+            score_obj, created = Score.objects.update_or_create(
+                judge=judge,
+                contestant=contestant,
+                criterion=criterion,
+                defaults={
+                    'score': score_int,
+                    'comments': comments  # Store comments with each score (they're the same per contestant)
+                }
+            )
+            
+            # If comments were updated, update all other scores for this contestant to keep them in sync
+            if comments:
+                Score.objects.filter(
+                    judge=judge,
+                    contestant=contestant
+                ).exclude(id=score_obj.id).update(comments=comments)
+            
+            saved_scores.append(ScoreSerializer(score_obj).data)
+    
+    if errors:
+        return Response({
+            'saved': saved_scores,
+            'errors': errors
+        }, status=status.HTTP_207_MULTI_STATUS)
+    
+    return Response({
+        'saved': saved_scores,
+        'message': 'Scores saved successfully'
+    }, status=status.HTTP_200_OK)
 
