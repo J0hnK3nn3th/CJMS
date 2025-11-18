@@ -22,6 +22,36 @@
   gap: 0.75rem;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.admin-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #E5E9C5;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  background: rgba(229, 233, 197, 0.15);
+  border-radius: 8px;
+}
+
+.user-icon {
+  font-size: 1rem;
+  color: #E5E9C5;
+}
+
+.welcome-text {
+  font-weight: 400;
+}
+
+.admin-name-text {
+  font-weight: 600;
+}
+
 .logo-icon {
   font-size: 1.5rem;
   width: 32px;
@@ -1057,6 +1087,19 @@
     font-size: 1.2rem;
   }
   
+  .header-right {
+    gap: 1rem;
+  }
+  
+  .admin-name {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .welcome-text {
+    display: none;
+  }
+  
   .nav-bar {
     padding: 0.5rem 1rem;
   }
@@ -1111,6 +1154,19 @@
 @media (max-width: 480px) {
   .header-left h1 {
     font-size: 1rem;
+  }
+  
+  .header-right {
+    gap: 0.75rem;
+  }
+  
+  .admin-name {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+  }
+  
+  .admin-name .user-icon {
+    display: none;
   }
   
   .content-area {

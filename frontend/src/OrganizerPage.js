@@ -29,6 +29,7 @@ const OrganizerPage = ({ onBack }) => {
   const [subEventsData, setSubEventsData] = useState({}); // {eventId: [subEvents]}
   const [selectedSubEventForScoreSheet, setSelectedSubEventForScoreSheet] = useState(null);
   const [judgesData, setJudgesData] = useState({}); // {subEventId: [judges]}
+  const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     eventName: '',
     eventYear: '',
@@ -42,6 +43,18 @@ const OrganizerPage = ({ onBack }) => {
     time: '',
     location: ''
   });
+
+  // Load user data from localStorage on component mount
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   // Fetch events from API on component mount
   useEffect(() => {
@@ -545,10 +558,25 @@ const OrganizerPage = ({ onBack }) => {
         <div className="header-left">
           <h1>Judging Management System</h1>
         </div>
-        <button className="logout-btn" onClick={onBack}>
-          Logout
-          <FontAwesomeIcon icon={faSignOutAlt} className="logout-icon" />
-        </button>
+        <div className="header-right">
+          {user && (
+            <div className="admin-name">
+              <FontAwesomeIcon icon={faUser} className="user-icon" />
+              <span className="welcome-text">Welcome, </span>
+              <span className="admin-name-text">
+                {user.first_name && user.last_name
+                  ? `${user.first_name} ${user.last_name}`
+                  : user.first_name
+                  ? user.first_name
+                  : user.username}
+              </span>
+            </div>
+          )}
+          <button className="logout-btn" onClick={onBack}>
+            Logout
+            <FontAwesomeIcon icon={faSignOutAlt} className="logout-icon" />
+          </button>
+        </div>
       </div>
 
       {/* Navigation Bar */}
@@ -1252,15 +1280,21 @@ const OrganizerPage = ({ onBack }) => {
                 onClick={async () => {
                   try {
                     setIsLoading(true);
-                    // Prepare settings data
+                    // Prepare settings data - filter out empty entries
                     const settingsData = {
-                      contestants: contestants.map(c => ({ name: c.name })),
-                      judges: judges.map(j => ({ 
-                        name: j.name, 
-                        type: j.type || 'judge',
-                        code: j.code || ''  // Preserve existing code if available
-                      })),
-                      criteria: criteria.map(c => ({ name: c.name, points: c.points || '0' }))
+                      contestants: contestants
+                        .filter(c => c.name && c.name.trim())
+                        .map(c => ({ name: c.name.trim() })),
+                      judges: judges
+                        .filter(j => j.name && j.name.trim())
+                        .map(j => ({ 
+                          name: j.name.trim(), 
+                          type: j.type || 'judge',
+                          code: j.code || ''  // Preserve existing code if available
+                        })),
+                      criteria: criteria
+                        .filter(c => c.name && c.name.trim())
+                        .map(c => ({ name: c.name.trim(), points: c.points || '0' }))
                     };
                     
                     // Save to database
@@ -1278,7 +1312,25 @@ const OrganizerPage = ({ onBack }) => {
                     handleCloseSettingsModal();
                   } catch (error) {
                     console.error('Error saving settings:', error);
-                    alert('Failed to save settings. Please try again.');
+                    console.error('Error response:', error.response);
+                    
+                    // Get error message from backend response
+                    let errorMessage = 'Failed to save settings. Please try again.';
+                    if (error.response?.data) {
+                      if (error.response.data.error) {
+                        errorMessage = error.response.data.error;
+                      } else if (error.response.data.detail) {
+                        errorMessage = error.response.data.detail;
+                      } else if (typeof error.response.data === 'string') {
+                        errorMessage = error.response.data;
+                      } else if (error.response.data.non_field_errors) {
+                        errorMessage = error.response.data.non_field_errors.join(', ');
+                      }
+                    } else if (error.message) {
+                      errorMessage = error.message;
+                    }
+                    
+                    alert(errorMessage);
                   } finally {
                     setIsLoading(false);
                   }

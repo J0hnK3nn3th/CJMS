@@ -11,6 +11,48 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import warnings
+
+# Monkey-patch to bypass MariaDB version check
+# This is a workaround for MariaDB 10.4 compatibility with Django 5.2
+try:
+    import django.db.backends.mysql.base
+    _original_check_database_version_supported = django.db.backends.mysql.base.DatabaseWrapper.check_database_version_supported
+
+    def _patched_check_database_version_supported(self):
+        try:
+            _original_check_database_version_supported(self)
+        except Exception as e:
+            # Only bypass if it's a version check error for MariaDB 10.4
+            if 'MariaDB 10.5' in str(e) or 'MariaDB 10.4' in str(e):
+                warnings.warn(f"Bypassing MariaDB version check: {e}", UserWarning)
+                return
+            raise
+
+    django.db.backends.mysql.base.DatabaseWrapper.check_database_version_supported = _patched_check_database_version_supported
+    
+    # Disable RETURNING clause for MariaDB 10.4 compatibility
+    # RETURNING is only supported in MariaDB 10.5+, but Django 5.2 uses it by default
+    import django.db.backends.mysql.features
+    django.db.backends.mysql.features.DatabaseFeatures.supports_returning = False
+    
+    # Patch the MySQL cursor execute method to strip RETURNING clauses
+    # This is needed because MariaDB 10.4 doesn't support RETURNING
+    import django.db.backends.mysql.base
+    _original_cursor_execute = django.db.backends.mysql.base.CursorWrapper.execute
+    
+    def _patched_cursor_wrapper_execute(self, sql, params=None):
+        # Remove RETURNING clause from SQL if present
+        if isinstance(sql, str) and ' RETURNING ' in sql.upper():
+            # Strip RETURNING clause and everything after it
+            sql_parts = sql.split(' RETURNING ', 1)
+            sql = sql_parts[0]
+        return _original_cursor_execute(self, sql, params)
+    
+    django.db.backends.mysql.base.CursorWrapper.execute = _patched_cursor_wrapper_execute
+except ImportError:
+    # If MySQL backend is not available, skip patching
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,9 +126,16 @@ DATABASES = {
         'USER':'root',
         'PASSWORD':'',
         'HOST':'localhost',
-        'PORT':'3306'
+        'PORT':'3306',
+        'OPTIONS': {
+            # Workaround for MariaDB 10.4 compatibility
+            # Django 5.2 requires MariaDB 10.5+, but we'll allow 10.4 for now
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        }
     }
 }
+
 
 
 

@@ -69,6 +69,82 @@ def login_view(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    """
+    Registration view that creates a new user and returns token
+    """
+    username = request.data.get('username')
+    password = request.data.get('password')
+    email = request.data.get('email', '')
+    first_name = request.data.get('first_name', '')
+    last_name = request.data.get('last_name', '')
+    
+    print(f"Registration attempt - Username: {username}")  # Debug log
+    
+    # Validate required fields
+    if not username or not password:
+        return Response(
+            {'error': 'Username and password are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if username already exists
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {'error': 'Username already exists'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if email already exists (if provided)
+    if email and User.objects.filter(email=email).exists():
+        return Response(
+            {'error': 'Email already registered'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Validate password strength (minimum 8 characters)
+    if len(password) < 8:
+        return Response(
+            {'error': 'Password must be at least 8 characters long'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Create new user
+    try:
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            email=email,
+            first_name=first_name,
+            last_name=last_name
+        )
+        print(f"User created: {user.username}")
+        
+        # Create token for the new user
+        token = Token.objects.create(user=user)
+        print(f"Token created: {token.key[:10]}...")
+        
+        # Return user data and token
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            },
+            'message': 'Registration successful'
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        return Response(
+            {'error': 'Failed to create user. Please try again.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -124,6 +200,12 @@ class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     permission_classes = [permissions.IsAuthenticated]
     
+    def get_queryset(self):
+        """
+        Filter events to only show those created by the authenticated user
+        """
+        return Event.objects.filter(created_by=self.request.user)
+    
     def get_serializer_class(self):
         if self.action == 'create':
             return EventCreateSerializer
@@ -161,6 +243,12 @@ class SubEventViewSet(viewsets.ModelViewSet):
     queryset = SubEvent.objects.all()
     serializer_class = SubEventSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Filter sub-events to only show those belonging to events created by the authenticated user
+        """
+        return SubEvent.objects.filter(event__created_by=self.request.user)
     
     def perform_create(self, serializer):
         serializer.save()
@@ -244,70 +332,105 @@ def subevent_settings_view(request, subevent_id):
                 {'error': 'Authentication required'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-        # Delete existing settings
-        Contestant.objects.filter(sub_event=sub_event).delete()
-        Judge.objects.filter(sub_event=sub_event).delete()
-        Criteria.objects.filter(sub_event=sub_event).delete()
         
-        # Create new contestants
-        contestants_data = request.data.get('contestants', [])
-        contestants = []
-        for idx, contestant_data in enumerate(contestants_data):
-            if contestant_data.get('name'):  # Only create if name is not empty
-                contestant = Contestant.objects.create(
-                    sub_event=sub_event,
-                    name=contestant_data['name'],
-                    order=idx
-                )
-                contestants.append(ContestantSerializer(contestant).data)
+        # Verify that the sub-event belongs to an event created by the authenticated user
+        if not sub_event.event.created_by or sub_event.event.created_by != request.user:
+            return Response(
+                {'error': 'You do not have permission to modify this sub-event'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
-        # Create new judges
-        judges_data = request.data.get('judges', [])
-        judges = []
-        for idx, judge_data in enumerate(judges_data):
-            if judge_data.get('name'):  # Only create if name is not empty
-                # Use existing code if provided and valid, otherwise generate new one
-                code = judge_data.get('code')
-                if code and len(code) == 6 and code.isdigit():
-                    # Verify code is unique (check all other judges since we deleted this sub_event's judges)
-                    if Judge.objects.filter(code=code).exists():
-                        code = generate_judge_code()  # Generate new if code already exists for another judge
-                else:
-                    code = generate_judge_code()  # Generate unique 6-digit code
-                
-                judge = Judge.objects.create(
-                    sub_event=sub_event,
-                    name=judge_data['name'],
-                    code=code,
-                    type=judge_data.get('type', 'judge'),
-                    order=idx
-                )
-                judges.append(JudgeSerializer(judge).data)
-        
-        # Create new criteria
-        criteria_data = request.data.get('criteria', [])
-        criteria = []
-        for idx, criterion_data in enumerate(criteria_data):
-            if criterion_data.get('name'):  # Only create if name is not empty
-                try:
-                    points = float(criterion_data.get('points', 0))
-                except (ValueError, TypeError):
-                    points = 0
-                
-                criterion = Criteria.objects.create(
-                    sub_event=sub_event,
-                    name=criterion_data['name'],
-                    points=points,
-                    order=idx
-                )
-                criteria.append(CriteriaSerializer(criterion).data)
-        
-        return Response({
-            'contestants': contestants,
-            'judges': judges,
-            'criteria': criteria,
-            'message': 'Settings saved successfully'
-        }, status=status.HTTP_201_CREATED)
+        try:
+            # Delete existing settings
+            Contestant.objects.filter(sub_event=sub_event).delete()
+            Judge.objects.filter(sub_event=sub_event).delete()
+            Criteria.objects.filter(sub_event=sub_event).delete()
+            
+            # Create new contestants
+            contestants_data = request.data.get('contestants', [])
+            contestants = []
+            for idx, contestant_data in enumerate(contestants_data):
+                if contestant_data and contestant_data.get('name'):  # Only create if name is not empty
+                    try:
+                        contestant = Contestant.objects.create(
+                            sub_event=sub_event,
+                            name=contestant_data['name'],
+                            order=idx
+                        )
+                        contestants.append(ContestantSerializer(contestant).data)
+                    except Exception as e:
+                        return Response(
+                            {'error': f'Error creating contestant: {str(e)}'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
+            # Create new judges
+            judges_data = request.data.get('judges', [])
+            judges = []
+            for idx, judge_data in enumerate(judges_data):
+                if judge_data and judge_data.get('name'):  # Only create if name is not empty
+                    try:
+                        # Use existing code if provided and valid, otherwise generate new one
+                        code = judge_data.get('code')
+                        if code and len(code) == 6 and code.isdigit():
+                            # Verify code is unique (check all other judges since we deleted this sub_event's judges)
+                            if Judge.objects.filter(code=code).exists():
+                                code = generate_judge_code()  # Generate new if code already exists for another judge
+                        else:
+                            code = generate_judge_code()  # Generate unique 6-digit code
+                        
+                        judge = Judge.objects.create(
+                            sub_event=sub_event,
+                            name=judge_data['name'],
+                            code=code,
+                            type=judge_data.get('type', 'judge'),
+                            order=idx
+                        )
+                        judges.append(JudgeSerializer(judge).data)
+                    except Exception as e:
+                        return Response(
+                            {'error': f'Error creating judge: {str(e)}'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
+            # Create new criteria
+            criteria_data = request.data.get('criteria', [])
+            criteria = []
+            for idx, criterion_data in enumerate(criteria_data):
+                if criterion_data and criterion_data.get('name'):  # Only create if name is not empty
+                    try:
+                        try:
+                            points = float(criterion_data.get('points', 0))
+                        except (ValueError, TypeError):
+                            points = 0
+                        
+                        criterion = Criteria.objects.create(
+                            sub_event=sub_event,
+                            name=criterion_data['name'],
+                            points=points,
+                            order=idx
+                        )
+                        criteria.append(CriteriaSerializer(criterion).data)
+                    except Exception as e:
+                        return Response(
+                            {'error': f'Error creating criteria: {str(e)}'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
+            return Response({
+                'contestants': contestants,
+                'judges': judges,
+                'criteria': criteria,
+                'message': 'Settings saved successfully'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            import traceback
+            print(f"Error saving settings: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Failed to save settings: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
