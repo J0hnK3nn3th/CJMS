@@ -10,13 +10,11 @@
     "test": "cd frontend && npm test",
     "dev": "cd frontend && npm start",
     "backend": "py manage.py runserver",
-    "dev:both": "concurrently \"py manage.py runserver\" \"cd frontend && npm start\"",
-    "start:all": "concurrently \"py manage.py runserver\" \"cd frontend && npm start\""
+    "dev:both": "node scripts/dev-all.js",
+    "start:all": "node scripts/dev-all.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "concurrently": "^9.2.1"
-  }
+  "devDependencies": {}
 }
